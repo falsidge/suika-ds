@@ -2,14 +2,14 @@
 
 class IdStorage
 {
-    int N = 127;
-    bool ids[127];
+    u8 N = 127;
+    bool ids[127] = {false};
 
 public:
-    int getId()
+    s16 getId()
     {
 
-        for (int i = 0; i < N; ++i)
+        for (u8 i = 0; i < N; ++i)
         {
             if (!ids[i])
             {
@@ -17,9 +17,10 @@ public:
                 return i;
             }
         }
+        return -1;
     }
 
-    void releaseId(int i)
+    void releaseId(u8 i)
     {
         ids[i] = false;
     }

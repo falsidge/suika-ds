@@ -9,6 +9,7 @@
 #include <time.h>
 #include <vector>
 #include <string>
+#include <unordered_set>
 // #include <chrono>
 
 #include <nds.h>
@@ -20,72 +21,52 @@
 #include "idstorage.hpp"
 // using namespace std::chrono;
 
-
-
 // 16 20 28 32 42 55 64 78 88 108 128
 std::vector<BallData> ballData = {
-    {
-        {"sprite/ball0"},
-        0.8f,
-        16
-    },
-    {
-        {"sprite/ball1"},
-        1.0f,
-        32
-    }, 
-    {
-        {"sprite/ball2"},
-        1.4f,
-        32
-    },
-    {
-        {"sprite/ball3"},
-        1.6f,
-        32
-    },
-    {
-        {"sprite/ball4"},
-        2.1f,
-        32
-    },
-    {
-        {"sprite/ball5"},
-        2.75f,
-        32
-    },
-    {
-        {"sprite/ball6"},
-        3.2f,
-        32
-    },
-    {
-        {"sprite/ball700", "sprite/ball701", "sprite/ball702", "sprite/ball703"},
-        3.9f,
-        32
-    },
-    {
-        {"sprite/ball800", "sprite/ball801", "sprite/ball802", "sprite/ball803"},
-        4.4f,
-        32
-    },
-    {
-        {"sprite/ball90", "sprite/ball91", "sprite/ball92", "sprite/ball93"},
-        5.9f,
-        32
-    },
-    {
-        {"sprite/ball1000", "sprite/ball1001", "sprite/ball1002", "sprite/ball1003"},
-        6.4f,
-        64
-    }
+    {0, {"sprite/ball0"}, 0.8f, 8, 16, {}},
+    {1, {"sprite/ball1"}, 1.0f, 10, 32, {}},
+    {2, {"sprite/ball2"}, 1.4f, 14, 32, {}},
+    {3, {"sprite/ball3"}, 1.6f, 16, 32, {}},
+    {4, {"sprite/ball4"}, 2.1f, 21, 64, {}},
+    {5, {"sprite/ball5"}, 2.75f, 27, 64, {}},
+    {6, {"sprite/ball6"}, 3.2f, 32, 64, {}},
+    // {7,
+    //     {"sprite/ball7","sprite/ball700", "sprite/ball701", "sprite/ball702", "sprite/ball703"},
+    //     3.9f,
+    //     39,
+    //     32,
+    //     {}
+    // },
+    // {8,
+    //     {"sprite/ball8","sprite/ball800", "sprite/ball801", "sprite/ball802", "sprite/ball803"},
+    //     4.4f,
+    //     44,
+    //     32,
+    //     {}
+    // },
+    // {9,
+    //     {"sprite/ball9","sprite/ball90", "sprite/ball91", "sprite/ball92", "sprite/ball93"},
+    //     5.9f,
+    //     59,
+    //     32,
+    //     {}
+    // },
+    // {10,
+    //     {"sprite/ball10","sprite/ball1000", "sprite/ball1001", "sprite/ball1002", "sprite/ball1003"},
+    //     6.4f,
+    //     64,
+    //     64,
+    //     {}
+    // }
 };
 
 int main(int argc, char **argv)
 {
     // Set random seed based on the current time
     srand(time(NULL));
+    u32 currentTimeMS = 0;
 
+    // timerStart(0, ClockDivider_1024, TIMER_FREQ_1024(10000), timerCallBack);
 
     // Prepare a NitroFS initialization screen
     NF_Set2D(0, 0);
@@ -99,7 +80,8 @@ int main(int argc, char **argv)
     nitroFSInit(NULL);
     NF_SetRootFolder("NITROFS");
 
-    IdStorage idstorage;
+    IdStorage topidstorage;
+    IdStorage bottomidstorage;
 
     // Initialize 2D engine in both screens and use mode 0
     NF_Set2D(0, 0);
@@ -116,86 +98,47 @@ int main(int argc, char **argv)
     NF_InitSpriteSys(1);    // Bottom screen
 
     // Load background files from NitroFS
-    NF_LoadTiledBg("bg/suika_top", "nfl", 256, 256);
-    NF_LoadTiledBg("bg/suika_bottom", "layer_3", 256, 256);
+    NF_LoadTiledBg("bg/suika_top", "suika_top", 256, 256);
+    NF_LoadTiledBg("bg/suika_bottom", "suika_bottom", 256, 256);
     // NF_LoadTiledBg("bg/bg2", "layer_2", 1024, 256);
 
-    // Load sprite files from NitroFS
-    // NF_LoadSpriteGfx("sprite/character", 0, 64, 64);
-    // NF_LoadSpritePal("sprite/character", 0);
-
-    NF_LoadSpriteGfx("sprite/ball10", 0, 64, 64);
-    NF_LoadSpritePal("sprite/ball10", 0);
-
     // Create top screen background
-    NF_CreateTiledBg(0, 3, "nfl");
+    NF_CreateTiledBg(0, 3, "suika_top");
 
     // Create bottom screen backgrounds
-    NF_CreateTiledBg(1, 3, "layer_3");
+    NF_CreateTiledBg(1, 3, "suika_bottom");
 
-    // Transfer the required sprites to VRAM
-    NF_VramSpriteGfx(1, 0, 0, true); // Ball: Keep all frames in VRAM
-    NF_VramSpritePal(1, 0, 0);
+    u8 spriteId = 0;
+    for (auto &balldata : ballData)
+    {
 
-    NF_VramSpriteGfx(0, 0, 0, true); 
-    NF_VramSpritePal(0, 0, 0);
+        std::string filename = balldata.spriteFiles[0];
+        const char *filename_c = filename.c_str();
+        NF_LoadSpriteGfx(filename_c, spriteId, balldata.spriteSize, balldata.spriteSize);
+        NF_LoadSpritePal(filename_c, spriteId);
+        NF_VramSpriteGfx(1, spriteId, spriteId, true); // Ball: Keep all frames in VRAM
+        NF_VramSpritePal(1, spriteId, spriteId);
 
-    // Setup ball sprites
+        NF_VramSpriteGfx(0, spriteId, spriteId, true); // Ball: Keep all frames in VRAM
+        NF_VramSpritePal(0, spriteId, spriteId);
+        balldata.spriteIds.push_back(spriteId);
+        spriteId++;
+    }
 
-    // for (int n = 0; n < 32; n++)
-    // {
-    //     ball_x[n] = rand() % 223;
-    //     ball_y[n] = rand() % 159;
-    //     ball_spx[n] = (rand() % 3) + 1;
-    //     ball_spy[n] = (rand() % 3) + 1;
-    //     NF_CreateSprite(0, n, 0, 0, ball_x[n], ball_y[n]);
-    // }
-    s16 dropBall_x = 20;
-    s16 dropBall_y = 70;
-    s8 dropBall_spx = 1;
-    s8 dropBall_spy = 1;
+    std::unordered_set<b2Body *> ballBodies;
 
-    std::vector<Ball> ballSprites;
-    std::vector<b2Body*> ballBodies;
+    BallData currentballdata = ballData[rand() % (ballData.size() - 2)];
 
-    Ball currentBall(idstorage);
-    b2Body* currentBody;
+    // Ball *currentBall = new Ball(idstorage, currentballdata.spriteIds[0], currentballdata.pixelRadius, ballBodies.size());
+    Ball *currentBall = new Ball(&topidstorage, &bottomidstorage, currentballdata);
+    b2Body *currentBody = nullptr;
     u8 debounce = 0;
 
-    // b2AABB worldAABB;
-    // worldAABB.minVertex.Set(-100.0f, -100.0f);
-    // worldAABB.maxVertex.Set(500.0f, 500.0f);
-
-    // b2Vec2 gravity(0.0f, -10.0f);
-    // bool doSleep = true;
-    // b2World world(worldAABB, gravity, doSleep);
-
-    // b2BoxDef groundBoxDef;
-    // groundBoxDef.extents.Set(128.0f, 2.0f);
-    // // groundBoxDef.density = 0.0f;
-
-    // b2BodyDef groundBodyDef;
-    // groundBodyDef.position.Set(128.0f, 0.0f);
-    // groundBodyDef.AddShape(&groundBoxDef);
-    // b2Body* ground = world.CreateBody(&groundBodyDef);
-
-    // b2CircleDef circle1;
-    // circle1.localPosition.Set(0.0f, 0.0f);
-
-    // circle1.radius = 1.0f;
-    // circle1.density = 1.0f;
-    // circle1.friction = 0.2f;
-
-
-    // b2BodyDef bodyDef;
-    // bodyDef.position.Set(128.0f, 128.0f);
-    // bodyDef.AddShape(&circle1);
-
     b2AABB worldAABB;
-    worldAABB.minVertex.Set(-12.8f*2.0f, -19.2f*2.0f);
-    worldAABB.maxVertex.Set(12.8f*2.0f, 19.2f*2.0f);
+    worldAABB.minVertex.Set(-12.8f * 2.0f, -19.2f * 2.0f);
+    worldAABB.maxVertex.Set(12.8f * 2.0f, 19.2f * 2.0f);
 
-    b2Vec2 gravity(0.0f, -2.0f);
+    b2Vec2 gravity(0.0f, -5.0f);
     bool doSleep = true;
 
     b2World world(worldAABB, gravity, doSleep);
@@ -205,51 +148,43 @@ int main(int argc, char **argv)
     groundBoxDef.density = 0.0f;
 
     b2BodyDef groundBodyDef;
-    groundBodyDef.position.Set(0.0f, -16.7f);
+    groundBodyDef.position.Set(0.0f, -18.8f);
     groundBodyDef.AddShape(&groundBoxDef);
-    b2Body* ground = world.CreateBody(&groundBodyDef);
+    world.CreateBody(&groundBodyDef);
 
     b2BoxDef leftWallBoxDef;
-    leftWallBoxDef.extents.Set(1.0f, 19.2f);
+    leftWallBoxDef.extents.Set(1.6f, 19.2f);
     leftWallBoxDef.density = 0.0f;
 
     b2BodyDef leftWallBodyDef;
     leftWallBodyDef.position.Set(-12.8f, 0.0f);
     leftWallBodyDef.AddShape(&leftWallBoxDef);
-    b2Body* leftWallBody = world.CreateBody(&leftWallBodyDef);
+    world.CreateBody(&leftWallBodyDef);
 
     b2BoxDef rightWallBoxDef;
-    rightWallBoxDef.extents.Set(1.0f, 19.2f);
+    rightWallBoxDef.extents.Set(1.6f, 19.2f);
     rightWallBoxDef.density = 0.0f;
 
     b2BodyDef rightWallBodyDef;
     rightWallBodyDef.position.Set(12.8f, 0.0f);
     rightWallBodyDef.AddShape(&rightWallBoxDef);
-    b2Body* rightWallBody = world.CreateBody(&rightWallBodyDef);
-    // b2CircleDef circle1;
-    // circle1.radius = 0.1f;
-    // circle1.density = 1.0f;
-    // circle1.friction = 0.3f;
+    world.CreateBody(&rightWallBodyDef);
 
-    // b2BodyDef bodyDef;
-    // // bodyDef.position.Set(0.0f, 12.2f);
-    // bodyDef.AddShape(&circle1);
-
-    // b2Body* body = world.CreateBody(&bodyDef);
-
-    // b2Body* body = world.CreateBody(&bodyDef);
-
+    cpuStartTiming(0);
+    u32 prev = 0;
+    float delta = 0;
+    bool touched = false;
+    bool dropped = false;
+    float deltadropped = 0;
     while (1)
     {
 
         // Animate character
         // time_t currentTime = time(NULL);
-
-        world.Step(1/60.0f,  2);
-        // b2Vec2 position = body->GetOriginPosition();
-        // b2Vec2 position2 = ground->GetOriginPosition();
-        // prevTimeMS = currentTimeMS;
-
+        currentTimeMS = cpuGetTiming();
+        delta = timerTicks2msec(currentTimeMS - prev) / 1000.0f;
+        world.Step(delta, 5);
+        prev = currentTimeMS;
 
         scanKeys();
         u16 keys = keysHeld();
@@ -259,91 +194,138 @@ int main(int argc, char **argv)
         }
         if (keys & KEY_LEFT)
         {
-            currentBall.moveLeft();
+            currentBall->moveLeft(delta);
         }
         if (keys & KEY_RIGHT)
         {
-            currentBall.moveRight();
+            currentBall->moveRight(delta);
+        }
+        touchPosition touch;
+        touchRead(&touch);
+        if (touch.z1 != 0)
+        {
+            currentBall->x = touch.px;
+            currentBall->checkBounds();
+            touched = true;
         }
 
-      
         keys = keysDown();
 
-        if (keys & KEY_A && !currentBall.dropped)
+        if ((keys & KEY_A || (touched && touch.z1 == 0)) && !dropped)
         {
-            currentBall.drop();
-            debounce = 30;
+            touched = false;
+            dropped = true;
+            deltadropped = currentTimeMS;
+
             b2CircleDef circle1;
-            circle1.radius = 2.7f;
+            circle1.radius = currentballdata.radius - 0.05;
             circle1.density = 1.0f;
             circle1.friction = 0.5f;
 
             b2BodyDef bodyDef;
             // bodyDef.position.Set(0.0f, 12.2f);
+            bodyDef.userData = currentBall;
             bodyDef.AddShape(&circle1);
             // circle1.categoryBits = 0x0002;
-            // bodyDef.linearDamping = 0.1f;
+            bodyDef.linearDamping = 0.001f;
             bodyDef.angularDamping = 0.01f;
-            bodyDef.position.Set((currentBall.x) / 10.0f - 12.8f, (192 - currentBall.y) / 10.0f) ;
+            bodyDef.position.Set((currentBall->x) / 10.0f - 12.8f, (192 - currentBall->y) / 10.0f);
             // bodyDef.position.Set(0.0, 12.2f);
             currentBody = world.CreateBody(&bodyDef);
-
+            ballBodies.insert(currentBody);
         }
-        // if (debounce > 0)
-        // {
-        //     debounce--;
-        // }
-        if (debounce == 0 && currentBall.dropped)
+
+        if (timerTicks2msec(currentTimeMS - deltadropped) > 1000 && dropped)
         {
-            ballSprites.push_back(currentBall);
-            ballBodies.push_back(currentBody);
-            currentBall = Ball(idstorage);
 
+            currentballdata = ballData[rand() % (ballData.size() - 2)];
+
+            currentBall = new Ball(&topidstorage, &bottomidstorage, currentballdata);
+            currentBody = nullptr;
+            dropped = false;
         }
-        else if (debounce > 0 && currentBall.dropped)
+        else if (debounce > 0 && dropped)
         {
             debounce--;
-            b2Vec2 position = currentBody->GetOriginPosition();
-            currentBall.x = (int) ((double) position.x * 10.0f )+ 128 ;
-            currentBall.y = 192 - (int)((double) position.y * 10.0f);
         }
-        // else if (!currentBall.dropped)
-        // {
-        //     currentBall.update();
-        // }
 
-        currentBall.draw();
-
-        
-
-
-        // ball.update();
-        // ball.x = (unsigned short) position.x + 128 - 16;
-        // ball.y = 192 - (int)((double) position.y * 10.0f);
-        // ball.draw();
-        // printf("ball %4.2f %4.2f ground %4.2f %4.2f \n ", (double) position.x, (double) position.y, (double) position2.x, (double) position2.y);
-        for (u8 i = 0; i < ballSprites.size(); i++)
+        std::unordered_set<b2Body *> destroyedBodies;
+        for (b2Contact *c = world.GetContactList(); c; c = c->GetNext())
         {
-            // ballSprites[i].update();
-            b2Vec2 position = ballBodies[i]->GetOriginPosition();
-            ballSprites[i].x = (int) ((double) position.x  * 10.0f) + 128 - 16;
-            ballSprites[i].y = 192 - (int)((double) position.y * 10.0f);
-            ballSprites[i].draw();
+            b2Body *body1 = c->GetShape1()->GetBody();
+            b2Body *body2 = c->GetShape2()->GetBody();
+            if (body1->m_userData == nullptr || body2->m_userData == nullptr)
+            {
+                continue;
+            }
+            if (destroyedBodies.find(body1) != destroyedBodies.end() || destroyedBodies.find(body2) != destroyedBodies.end())
+            {
+                continue;
+            }
+            if (((Ball *)body1->GetUserData())->radius == ((Ball *)body2->GetUserData())->radius)
+            {
+
+                if (((Ball *)body1->m_userData)->id == ballData.size() - 1)
+                {
+                    continue;
+                }
+
+                if (body1 == currentBody || body2 == currentBody)
+                {
+                    currentBall = nullptr;
+                }
+                destroyedBodies.insert(body1);
+                destroyedBodies.insert(body2);
+
+                BallData newballdata = ballData[((Ball *)body1->m_userData)->id + 1];
+                b2CircleDef circle1;
+                circle1.radius = newballdata.radius - 0.05;
+                circle1.density = 1.0f;
+                circle1.friction = 0.5f;
+
+                b2BodyDef bodyDef;
+                // bodyDef.position.Set(0.0f, 12.2f);
+                Ball *newBall = new Ball(&topidstorage, &bottomidstorage, newballdata);
+
+                bodyDef.userData = newBall;
+                bodyDef.AddShape(&circle1);
+                // circle1.categoryBits = 0x0002;
+                bodyDef.linearDamping = 0.001f;
+                bodyDef.angularDamping = 0.01f;
+                // get midpoint of body1 and body2
+                b2Vec2 position1 = body1->GetOriginPosition();
+                b2Vec2 position2 = body2->GetOriginPosition();
+                bodyDef.position.Set((position1.x + position2.x) / 2.0f, (position1.y + position2.y) / 2.0f);
+                // bodyDef.position.Set(0.0, 12.2f);
+                ballBodies.insert(world.CreateBody(&bodyDef));
+
+                delete (Ball *)body1->m_userData;
+                delete (Ball *)body2->m_userData;
+                body1->m_userData = nullptr;
+                body2->m_userData = nullptr;
+
+                ballBodies.erase(body1);
+                ballBodies.erase(body2);
+                world.DestroyBody(body1);
+                world.DestroyBody(body2);
+            }
+        }
+        if (!dropped && currentBall != nullptr)
+        {
+            currentBall->draw();
         }
 
-        // Move balls
-        // for (int n = 0; n < 32; n++)
-        // {
-        //     ball_x[n] += ball_spx[n];
-        //     if ((ball_x[n] < 0) || (ball_x[n] > 223))
-        //         ball_spx[n] *= -1;
-
-        //     ball_y[n] += ball_spy[n];
-        //     if ((ball_y[n] < 0) || (ball_y[n] > 159))
-        //         ball_spy[n] *= -1;
-
-        //     NF_MoveSprite(0, n, ball_x[n], ball_y[n]);
-        // }
+        for (auto it : ballBodies)
+        {
+            if ((Ball *)it->m_userData == nullptr)
+            {
+                continue;
+            }
+            b2Vec2 position = it->GetOriginPosition();
+            ((Ball *)it->m_userData)->x = (int)((double)position.x * 10.0f) + 128;
+            ((Ball *)it->m_userData)->y = 192 - (int)((double)position.y * 10.0f);
+            ((Ball *)it->m_userData)->draw();
+        }
 
         // Update OAM array
         NF_SpriteOamSet(0);

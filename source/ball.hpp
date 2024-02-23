@@ -7,56 +7,55 @@
 #include "IdStorage.hpp"
 
 #include <Box2D.h>
-struct BallData{
+struct BallData
+{
+    u8 id;
     std::vector<std::string> spriteFiles;
     float radius;
     u8 pixelRadius;
     u8 spriteSize;
+    std::vector<u8> spriteIds;
 };
 
 class Ball
 {
 public:
+    IdStorage* topidStorage;
+    IdStorage* bottomidStorage;
+    u8 spriteId;
+    u8 radius;
+    u8 id;
+    BallData currentballdata;
+
     s16 x;
     s16 y;
-    s8 vx;
-    s8 vy;
-    s8 ax;
-    s8 ay;
 
-    u8 radius;
-
-
-    s8 topSpriteId;
-    s8 bottomSpriteId;
-
+    s16 topSpriteId;
+    s16 bottomSpriteId;
     bool dropped;
-    IdStorage idStorage;
+    bool destroyed;
+    // Ball *currentBall = new Ball(idstorage, currentballdata.spriteIds[0], currentballdata.pixelRadius, ballBodies.size());
 
-    Ball(IdStorage storage)
+    Ball(IdStorage* topstorage, IdStorage* bottomstorage, BallData balldata) : topidStorage(topstorage), bottomidStorage(bottomstorage), spriteId(balldata.spriteIds[0]), radius(balldata.pixelRadius), id(balldata.id), currentballdata(balldata)
     {
         x = 20;
         y = 70;
-        vx = 1;
-        vy = 2;
-        ax = 0;
-        ay = 0;
+
         topSpriteId = -1;
         bottomSpriteId = -1;
-        radius = 16;
 
         dropped = false;
-        idStorage = storage;
+        destroyed = false;
     }
 
     void update()
     {
         if (dropped)
         {
-            if (y <= 192 * 2 - radius*2 - 10)
+            if (y <= 192 * 2 - radius * 2 - 10)
             {
 
-                y += vy;
+                // y += vy;
             }
             // if (y > 160)
             // {
@@ -66,29 +65,41 @@ public:
         }
     }
 
-    void moveLeft()
+    void moveLeft(float delta)
     {
         if (dropped)
         {
             return;
         }
-        x -= 2;
+        x -= 200 * delta;
         if (x < 20)
         {
             x = 20;
         }
     }
 
-    void moveRight()
+    void moveRight(float delta)
     {
         if (dropped)
         {
             return;
         }
-        x += 2;
+        x += 200 * delta;
         if (x > 200)
         {
             x = 200;
+        }
+    }
+
+    void checkBounds()
+    {
+        if (x > 200)
+        {
+            x = 200;
+        }
+        if (x < 20)
+        {
+            x = 20;
         }
     }
 
@@ -98,30 +109,90 @@ public:
     }
     void draw()
     {
-        if (y > 192 - radius*2)
+        if (destroyed)
+        {
+            return; 
+        }
+        
+        if (y > 192 - radius)
         {
             if (bottomSpriteId < 0)
             {
-                bottomSpriteId = idStorage.getId();
-                NF_CreateSprite(1, bottomSpriteId, 0, 0, x, y - 192);
+                s16 newId = bottomidStorage->getId();
+                if (newId < 0 || newId > 127)
+                {
+                    return;
+                }
+                bottomSpriteId = newId;
+                NF_CreateSprite(1, bottomSpriteId, spriteId, spriteId, x - radius, y - 192 - radius);
             }
             else
             {
-                NF_MoveSprite(1, bottomSpriteId, x, y - 192);
+                NF_MoveSprite(1, bottomSpriteId, x - radius, y - 192 - radius);
             }
         }
-        if (y < 192)
+        else
+        {
+            if (bottomSpriteId >= 0)
+            {
+                NF_DeleteSprite(1, bottomSpriteId);
+                bottomidStorage->releaseId(bottomSpriteId);
+                bottomSpriteId = -1;
+            }
+        }
+        if (y <= 192 + radius)
         {
             if (topSpriteId < 0)
             {
-                topSpriteId = idStorage.getId();
-                NF_CreateSprite(0, topSpriteId, 0, 0, x, y);
+                // topSpriteId = topidStorage.getId();
+                s16 newId =  topidStorage->getId();
+                if (newId < 0 || newId > 127)
+                {
+                    return;
+                }
+                topSpriteId = newId;
+                NF_CreateSprite(0, topSpriteId, spriteId, spriteId, x - radius, y - radius);
             }
             else
             {
-                NF_MoveSprite(0, topSpriteId, x, y);
+                NF_MoveSprite(0, topSpriteId, x - radius, y - radius);
             }
         }
+        else
+        {
+            if (topSpriteId >= 0)
+            {
+                NF_DeleteSprite(0, topSpriteId);
+                topidStorage->releaseId(topSpriteId);
+                topSpriteId = -1;
+            }
+        }
+    }
+    void destroy()
+    {
+
+        if (destroyed)
+        {
+            return;
+        }
+        destroyed = true;
+        if (topSpriteId >= 0)
+        {
+            NF_DeleteSprite(0, topSpriteId);
+            topidStorage->releaseId(topSpriteId);
+            topSpriteId = -1;
+        }
+        if (bottomSpriteId >= 0)
+        {
+            NF_DeleteSprite(1, bottomSpriteId);
+            bottomidStorage->releaseId(bottomSpriteId);
+            bottomSpriteId = -1;
+        }
+    }
+
+    ~Ball()
+    {
+        this->destroy();
     }
 };
 #define BALL_HPP
