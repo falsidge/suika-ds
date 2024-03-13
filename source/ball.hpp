@@ -20,8 +20,8 @@ struct BallData
 class Ball
 {
 public:
-    IdStorage* topidStorage;
-    IdStorage* bottomidStorage;
+    IdStorage *topidStorage;
+    IdStorage *bottomidStorage;
     u8 spriteId;
     u8 radius;
     u8 id;
@@ -36,7 +36,7 @@ public:
     bool destroyed;
     // Ball *currentBall = new Ball(idstorage, currentballdata.spriteIds[0], currentballdata.pixelRadius, ballBodies.size());
 
-    Ball(IdStorage* topstorage, IdStorage* bottomstorage, BallData balldata) : topidStorage(topstorage), bottomidStorage(bottomstorage), spriteId(balldata.spriteIds[0]), radius(balldata.pixelRadius), id(balldata.id), currentballdata(balldata)
+    Ball(IdStorage *topstorage, IdStorage *bottomstorage, BallData balldata) : topidStorage(topstorage), bottomidStorage(bottomstorage), spriteId(balldata.spriteIds[0]), radius(balldata.pixelRadius), id(balldata.id), currentballdata(balldata)
     {
         x = 20;
         y = 70;
@@ -107,13 +107,29 @@ public:
     {
         dropped = true;
     }
+    void resize(u16 spriteId, u8 screen)
+    {
+        if (radius > 32)
+        {
+            NF_EnableSpriteRotScale(screen, spriteId, id, true);
+            // NF_EnableSpriteRotScale(0, spriteId, id, true);
+        }
+    }
+    s32 getScaleError()
+    {
+        if (radius <= 32)
+        {
+            return 0;
+        }
+        return -(64 - radius);
+    }
     void draw()
     {
         if (destroyed)
         {
-            return; 
+            return;
         }
-        
+
         if (y > 192 - radius)
         {
             if (bottomSpriteId < 0)
@@ -124,11 +140,15 @@ public:
                     return;
                 }
                 bottomSpriteId = newId;
-                NF_CreateSprite(1, bottomSpriteId, spriteId, spriteId, x - radius, y - 192 - radius);
+
+                NF_CreateSprite(1, bottomSpriteId, spriteId, spriteId, x - radius + getScaleError(), y - 192 - radius + getScaleError());
+
+                // NF_CreateSprite(1, bottomSpriteId, spriteId, spriteId, x - radius, y - 192 - radius);
+                resize(bottomSpriteId, 1);
             }
             else
             {
-                NF_MoveSprite(1, bottomSpriteId, x - radius, y - 192 - radius);
+                NF_MoveSprite(1, bottomSpriteId, x - radius + getScaleError(), y - 192 - radius + getScaleError());
             }
         }
         else
@@ -140,22 +160,26 @@ public:
                 bottomSpriteId = -1;
             }
         }
-        if (y <= 192 + radius)
+        if (y <= 192 + radius )
         {
             if (topSpriteId < 0)
             {
                 // topSpriteId = topidStorage.getId();
-                s16 newId =  topidStorage->getId();
+                s16 newId = topidStorage->getId();
                 if (newId < 0 || newId > 127)
                 {
                     return;
                 }
                 topSpriteId = newId;
-                NF_CreateSprite(0, topSpriteId, spriteId, spriteId, x - radius, y - radius);
+
+                NF_CreateSprite(0, topSpriteId, spriteId, spriteId, x - radius + getScaleError(), y - radius + getScaleError());
+
+                resize(topSpriteId, 0);
             }
             else
             {
-                NF_MoveSprite(0, topSpriteId, x - radius, y - radius);
+
+                NF_MoveSprite(0, topSpriteId, x - radius + getScaleError(), y - radius + getScaleError());
             }
         }
         else

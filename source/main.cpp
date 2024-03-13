@@ -19,54 +19,26 @@
 
 #include "ball.hpp"
 #include "idstorage.hpp"
-// using namespace std::chrono;
 
-// 16 20 28 32 42 55 64 78 88 108 128
 std::vector<BallData> ballData = {
-    {0, {"sprite/ball0"}, 0.8f, 8, 16, {}},
-    {1, {"sprite/ball1"}, 1.0f, 10, 32, {}},
-    {2, {"sprite/ball2"}, 1.4f, 14, 32, {}},
-    {3, {"sprite/ball3"}, 1.6f, 16, 32, {}},
-    {4, {"sprite/ball4"}, 2.1f, 21, 64, {}},
-    {5, {"sprite/ball5"}, 2.75f, 27, 64, {}},
-    {6, {"sprite/ball6"}, 3.2f, 32, 64, {}},
-    // {7,
-    //     {"sprite/ball7","sprite/ball700", "sprite/ball701", "sprite/ball702", "sprite/ball703"},
-    //     3.9f,
-    //     39,
-    //     32,
-    //     {}
-    // },
-    // {8,
-    //     {"sprite/ball8","sprite/ball800", "sprite/ball801", "sprite/ball802", "sprite/ball803"},
-    //     4.4f,
-    //     44,
-    //     32,
-    //     {}
-    // },
-    // {9,
-    //     {"sprite/ball9","sprite/ball90", "sprite/ball91", "sprite/ball92", "sprite/ball93"},
-    //     5.9f,
-    //     59,
-    //     32,
-    //     {}
-    // },
-    // {10,
-    //     {"sprite/ball10","sprite/ball1000", "sprite/ball1001", "sprite/ball1002", "sprite/ball1003"},
-    //     6.4f,
-    //     64,
-    //     64,
-    //     {}
-    // }
-};
+    {0, {"sprite/ball-00"}, 0.8f, 8, 16, {}},
+    {1, {"sprite/ball-01"}, 1.0f, 10, 32, {}},
+    {2, {"sprite/ball-02"}, 1.4f, 14, 32, {}},
+    {3, {"sprite/ball-03"}, 1.6f, 16, 32, {}},
+    {4, {"sprite/ball-04"}, 2.1f, 21, 64, {}},
+    {5, {"sprite/ball-05"}, 2.75f, 27, 64, {}},
+    {6, {"sprite/ball-06"}, 3.2f, 32, 64, {}},
+    {7, {"sprite/ball-07"}, 3.9f, 39, 64, {}},
+    {8, {"sprite/ball-08"}, 4.4f, 44, 64, {}},
+    {9, {"sprite/ball-09"}, 5.9f, 59, 64, {}},
+    {10, {"sprite/ball-10"}, 6.4f, 64, 64, {}}};
+
 
 int main(int argc, char **argv)
 {
     // Set random seed based on the current time
     srand(time(NULL));
     u32 currentTimeMS = 0;
-
-    // timerStart(0, ClockDivider_1024, TIMER_FREQ_1024(10000), timerCallBack);
 
     // Prepare a NitroFS initialization screen
     NF_Set2D(0, 0);
@@ -108,31 +80,46 @@ int main(int argc, char **argv)
     // Create bottom screen backgrounds
     NF_CreateTiledBg(1, 3, "suika_bottom");
 
+    // Create text layers
+    NF_LoadTextFont("fnt/default", "normal", 256, 256, 0);
+    NF_CreateTextLayer(0, 0, 0, "normal");
+
     u8 spriteId = 0;
+
     for (auto &balldata : ballData)
     {
 
-        std::string filename = balldata.spriteFiles[0];
-        const char *filename_c = filename.c_str();
-        NF_LoadSpriteGfx(filename_c, spriteId, balldata.spriteSize, balldata.spriteSize);
-        NF_LoadSpritePal(filename_c, spriteId);
-        NF_VramSpriteGfx(1, spriteId, spriteId, true); // Ball: Keep all frames in VRAM
-        NF_VramSpritePal(1, spriteId, spriteId);
+        for (auto file : balldata.spriteFiles)
+        {
+            std::string filename = file;
+            const char *filename_c = filename.c_str();
+            NF_LoadSpriteGfx(filename_c, spriteId, balldata.spriteSize, balldata.spriteSize);
+            NF_LoadSpritePal(filename_c, spriteId);
 
-        NF_VramSpriteGfx(0, spriteId, spriteId, true); // Ball: Keep all frames in VRAM
-        NF_VramSpritePal(0, spriteId, spriteId);
-        balldata.spriteIds.push_back(spriteId);
-        spriteId++;
+            NF_VramSpriteGfx(1, spriteId, spriteId, true); // Ball: Keep all frames in VRAM
+            NF_VramSpritePal(1, spriteId, spriteId);
+
+            NF_VramSpriteGfx(0, spriteId, spriteId, true); // Ball: Keep all frames in VRAM
+            NF_VramSpritePal(0, spriteId, spriteId);
+
+            if (balldata.pixelRadius > 32)
+            {
+                u32 scaleFactor = 512 - floatToFixed((float32) 32.0f/balldata.pixelRadius, 8);
+                NF_SpriteRotScale(1, balldata.id, 0, scaleFactor, scaleFactor);
+                NF_SpriteRotScale(0, balldata.id, 0, scaleFactor, scaleFactor);
+            }
+            balldata.spriteIds.push_back(spriteId);
+            spriteId++;
+        }
     }
 
     std::unordered_set<b2Body *> ballBodies;
 
-    BallData currentballdata = ballData[rand() % (ballData.size() - 2)];
+    BallData currentballdata = ballData[(ballData.size()) - 1];
 
     // Ball *currentBall = new Ball(idstorage, currentballdata.spriteIds[0], currentballdata.pixelRadius, ballBodies.size());
     Ball *currentBall = new Ball(&topidstorage, &bottomidstorage, currentballdata);
     b2Body *currentBody = nullptr;
-    u8 debounce = 0;
 
     b2AABB worldAABB;
     worldAABB.minVertex.Set(-12.8f * 2.0f, -19.2f * 2.0f);
@@ -171,16 +158,16 @@ int main(int argc, char **argv)
     world.CreateBody(&rightWallBodyDef);
 
     cpuStartTiming(0);
+
     u32 prev = 0;
     float delta = 0;
     bool touched = false;
     bool dropped = false;
-    float deltadropped = 0;
+    u32 deltadropped = 0;
+    u16 score = 0;
+
     while (1)
     {
-
-        // Animate character
-        // time_t currentTime = time(NULL);
         currentTimeMS = cpuGetTiming();
         delta = timerTicks2msec(currentTimeMS - prev) / 1000.0f;
         world.Step(delta, 5);
@@ -238,15 +225,11 @@ int main(int argc, char **argv)
         if (timerTicks2msec(currentTimeMS - deltadropped) > 1000 && dropped)
         {
 
-            currentballdata = ballData[rand() % (ballData.size() - 2)];
+            currentballdata = ballData[rand() % (ballData.size())];
 
             currentBall = new Ball(&topidstorage, &bottomidstorage, currentballdata);
             currentBody = nullptr;
             dropped = false;
-        }
-        else if (debounce > 0 && dropped)
-        {
-            debounce--;
         }
 
         std::unordered_set<b2Body *> destroyedBodies;
@@ -269,6 +252,8 @@ int main(int argc, char **argv)
                 {
                     continue;
                 }
+                u8 id = ((Ball *)body1->m_userData)->id;
+                score += (id + 1) * (id + 2) / 2;
 
                 if (body1 == currentBody || body2 == currentBody)
                 {
@@ -326,6 +311,10 @@ int main(int argc, char **argv)
             ((Ball *)it->m_userData)->y = 192 - (int)((double)position.y * 10.0f);
             ((Ball *)it->m_userData)->draw();
         }
+
+        std::string scoreString = std::to_string(score);
+        NF_WriteText(0, 0, 1, 1, ("SCORE: " + scoreString).c_str());
+        NF_UpdateTextLayers();
 
         // Update OAM array
         NF_SpriteOamSet(0);
