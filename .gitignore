@@ -1,6 +1,5 @@
-assets
-sprite.nds
-sprite.elf
+*.nds
+*.elf
 nitrofiles
 build
 .vscode
