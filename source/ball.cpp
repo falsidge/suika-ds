@@ -1,7 +1,7 @@
 #include "ball.hpp"
 #include "IdStorage.hpp"
 
-Ball::Ball(IdStorage *topidStorage, IdStorage *bottomidStorage, BallData &balldata) : topidStorage(topidStorage), bottomidStorage(bottomidStorage), pixelRadius(balldata.pixelRadius), physicsRadius(balldata.physicsRadius), id(balldata.id)
+Ball::Ball(IdStorage *topidStorage, IdStorage *bottomidStorage, BallData balldata) : topidStorage(topidStorage), bottomidStorage(bottomidStorage), pixelRadius(balldata.pixelRadius), physicsRadius(balldata.physicsRadius), id(balldata.id)
 {
     x = 60;
     y = 70;

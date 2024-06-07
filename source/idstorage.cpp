@@ -3,7 +3,7 @@
 s16 IdStorage::getId()
 {
 
-    for (u8 i = 0; i < N; ++i)
+    for (int i = 0; i < N; ++i)
     {
         if (!ids[i])
         {
@@ -14,7 +14,7 @@ s16 IdStorage::getId()
     return -1;
 }
 
-void IdStorage::releaseId(u8 i)
+void IdStorage::releaseId(int i)
 {
     ids[i] = false;
 }

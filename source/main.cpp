@@ -26,6 +26,12 @@ std::vector<BallData> ballData = {
     {9, {{"sprite/ball-09-half-00", 64, 32}, {"sprite/ball-09-half-01", 64, 32, 0, 59, 0}}, 5.9f, 59},
     {10, {{"sprite/ball-10-half-00", 64, 32}, {"sprite/ball-10-half-01", 64, 32, -1, 63, 0}}, 6.4f, 64}};
 
+u32 timeTicks = 0;
+void countTime()
+{
+    timeTicks++;
+}
+
 int main(int argc, char **argv)
 {
     // Set random seed based on the current time
@@ -100,7 +106,7 @@ int main(int argc, char **argv)
 
             if (balldata.pixelRadius > 32)
             {
-                u32 scaleFactorWidth = 512 - floatToFixed((float32)32.0f / balldata.pixelRadius, 8);
+                u32 scaleFactorWidth = 512U - floatToFixed((float32)32.0f / balldata.pixelRadius, 8);
 
                 NF_SpriteRotScale(1, rotId, file.rot, scaleFactorWidth, scaleFactorWidth);
                 NF_SpriteRotScale(0, rotId, file.rot, scaleFactorWidth, scaleFactorWidth);
@@ -154,11 +160,13 @@ int main(int argc, char **argv)
     rightWallBodyDef.AddShape(&rightWallBoxDef);
     b2Body* rightWall = world.CreateBody(&rightWallBodyDef);
 
-    cpuStartTiming(0);
+    // cpuStartTiming(0);
 
     u32 prev = 0;
     float delta = 0;
     bool running = true;
+
+    timerStart(0, ClockDivider_1024, TIMER_FREQ_1024(1000), countTime);
 
     while (running)
     {
@@ -175,10 +183,10 @@ int main(int argc, char **argv)
 
         while (1)
         {
-            currentTimeMS = cpuGetTiming();
-            delta = timerTicks2msec(currentTimeMS - prev) / 1000.0f;
+            // currentTimeMS = cpuGetTiming();
+            delta = (float) (timeTicks - prev)/ 1000.0f;
             world.Step(delta, 5);
-            prev = currentTimeMS;
+            prev = timeTicks;
 
             scanKeys();
             u16 keys = keysHeld();
@@ -202,17 +210,19 @@ int main(int argc, char **argv)
                     currentBall->moveRight(delta);
                 }
             }
-            touchPosition touch;
-            touchRead(&touch);
-            if (touch.z1 != 0 && !dropped)
+            
+            bool touchHeld = keys & KEY_TOUCH;
+            if (touchHeld && !dropped)
             {
+                touchPosition touch;
+                touchRead(&touch);
                 currentBall->x = touch.px;
                 currentBall->checkBounds();
                 touched = true;
             }
-
             keys = keysDown();
-            if ((keys & KEY_A || (touched && touch.z1 == 0)) && !dropped)
+
+            if ((keys & KEY_A || (touched && !touchHeld)) && !dropped)
             {
                 touched = false;
                 dropped = true;
@@ -229,7 +239,7 @@ int main(int argc, char **argv)
                 bodyDef.AddShape(&circle1);
                 bodyDef.linearDamping = 0.001f;
                 bodyDef.angularDamping = 0.01f;
-                bodyDef.position.Set((currentBall->x) / 10.0f - 12.8f, (192 - currentBall->y) / 10.0f);
+                bodyDef.position.Set((currentBall->x) / 10.0f - 12.8f, (192L - currentBall->y) / 10.0f);
                 // bodyDef.position.Set(0.0, 12.2f);
                 currentBody = world.CreateBody(&bodyDef);
                 ballBodies.insert(currentBody);
@@ -334,6 +344,9 @@ int main(int argc, char **argv)
                 b2Vec2 position = it->GetOriginPosition();
                 ((Ball *)it->m_userData)->x = (s16)((float)position.x * 10.0f) + 128;
                 ((Ball *)it->m_userData)->y = 192 - (s16)((float)position.y * 10.0f);
+                // ((Ball *)it->m_userData)->x = 64;
+                // ((Ball *)it->m_userData)->y = 64;
+
                 ((Ball *)it->m_userData)->draw();
                 if (it != currentBody && ((Ball *)it->m_userData)->y - ((Ball *)it->m_userData)->pixelRadius < 50)
                 {

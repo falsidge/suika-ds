@@ -12,12 +12,12 @@ void Sprite::setIDStorage(IdStorage *topidStorage, IdStorage *bottomidStorage)
     idStorage[1] = bottomidStorage;
 }
 
-void Sprite::setRealRadius(u8 radius)
+void Sprite::setRealRadius(s32 radius)
 {
     this->radius = radius;
 }
 
-void Sprite::drawOnScreen(s16 x, s16 y, u8 screen)
+void Sprite::drawOnScreen(s32 x, s32 y, int screen)
 {
     if (screenIds[screen] == -1)
     {
@@ -41,7 +41,7 @@ void Sprite::drawOnScreen(s16 x, s16 y, u8 screen)
     }
 }
 
-void Sprite::deleteFromScreen(u8 screen)
+void Sprite::deleteFromScreen(int screen)
 {
     if (screenIds[screen] != -1)
     {
@@ -53,18 +53,18 @@ void Sprite::deleteFromScreen(u8 screen)
     }
 }
 
-void Sprite::draw(s16 x, s16 y)
+void Sprite::draw(s32 x, s32 y)
 {
     x += offsetX;
     y += offsetY;
     x = x - radius;
     y = y - radius;
-
     if (radius > 32)
     {
         x -= (64 - radius);
         y -= (32 - radius / 2);
     }
+    // printf("Drawing sprite %d at %d %d offset %d %d radius %d\n", spriteId, x, y, offsetX, offsetY, radius);
 
     // bottom screen
     if (y > 192 - radius - (radius <= 32 ? radius : 64 - radius))
@@ -73,7 +73,7 @@ void Sprite::draw(s16 x, s16 y)
     }
     else
     {
-        this->deleteFromScreen(1);
+        // this->deleteFromScreen(1);
     }
 
     // top screen

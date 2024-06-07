@@ -7,7 +7,7 @@ struct BallData
     u8 id;
     std::vector<SpriteData> spriteFiles;
     float physicsRadius;
-    u8 pixelRadius;
+    s32 pixelRadius;
 };
 
 class Ball
@@ -16,19 +16,19 @@ class Ball
     IdStorage *bottomidStorage;
     
 public:
-    u8 pixelRadius;
+    s32 pixelRadius;
     float physicsRadius;
     
     u8 id;
 
-    s16 x;
-    s16 y;
+    s32 x;
+    s32 y;
 
     bool dropped;
 
     std::vector<Sprite> ballSprites;
 
-    Ball(IdStorage *topidStorage, IdStorage *bottomidStorage, BallData& balldata);
+    Ball(IdStorage *topidStorage, IdStorage *bottomidStorage, BallData balldata);
 
     void moveLeft(float delta);
     void moveRight(float delta);
